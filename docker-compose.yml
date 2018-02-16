@@ -1,0 +1,72 @@
+version: '2.1'
+services:
+
+#  loadbalancer:
+#    image: dockercloud/haproxy:latest
+#    container_name: loadbalancer
+#    ports:
+#      - "9200:80"
+#    links:
+#      - elasticsearch
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    networks:
+#      - elknet
+#    depends_on:
+#      - elasticsearch
+
+  elasticsearch:
+    build:
+      context: elasticsearch/
+    container_name: elasticsearch
+    environment:
+      - "ES_JAVA_OPTS=-Xmx256m -Xms256m"
+      - "cluster.name=rft"
+      - "ELASTIC_PASSWORD=changeme"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/var/data/elasticsearch
+      - ./elasticsearch/config/elasticsearch.yml:/etc/elasticsearch/config/elasticsearch.yml:ro
+      - ./elasticsearch/config/jvm.options:/etc/elasticsearch/config/jvm.options:ro
+      - ./elasticsearch/config/log4j2.properties:/etc/elasticsearch/config/log4j2.properties:ro
+    networks:
+      - elknet
+
+  kibana:
+    build:
+      context: kibana/
+    container_name: kibana
+    volumes:
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    networks:
+      - elknet
+    depends_on:
+      - elasticsearch
+
+  logstash:
+    build:
+      context: logstash/
+    container_name: logstash
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    links:
+      - elasticsearch
+    volumes:
+      - ./logstash/config/logstash.yml:/etc/logstash/logstash.yml:ro
+      - ./logstash/pipeline/logstash.conf:/etc/logstash/conf.d/logstash.conf:ro
+    networks:
+      - elknet
+    depends_on:
+      - elasticsearch
+
+volumes:
+  esdata:
+    driver: local
+
+networks:
+  elknet:
+    driver: bridge
+
