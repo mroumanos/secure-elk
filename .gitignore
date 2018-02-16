@@ -1,1 +1,3 @@
 docker-compose.proxy.yml
+*/server.crt
+*/server.key
